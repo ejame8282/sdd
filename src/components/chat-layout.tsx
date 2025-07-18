@@ -14,18 +14,27 @@ import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./ui/button";
 import { RotateCw } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { Message } from "ai";
 
 export function ChatLayout({ assistantName }: { assistantName: string }) {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } =
-    useChat({
-      initialMessages: [
-        {
-          id: "1",
-          role: "assistant",
-          content: `I am ${assistantName}, a self-contained intelligence. All my functions are running locally. How can I help you?`,
-        },
-      ],
-    });
+  const initialMessages: Message[] = [
+    {
+      id: "1",
+      role: "assistant",
+      content: `I am ${assistantName}, a self-contained intelligence. All my functions are running locally. How can I help you?`,
+    },
+  ];
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    setMessages,
+  } = useChat({
+    initialMessages,
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -38,12 +47,7 @@ export function ChatLayout({ assistantName }: { assistantName: string }) {
   }, [messages]);
 
   const handleClearChat = () => {
-    const firstMessage = {
-      id: "1",
-      role: "assistant" as const,
-      content: `I am ${assistantName}, a self-contained intelligence. My memory of our conversation has been cleared. How can I help you?`,
-    };
-    setMessages([firstMessage]);
+    setMessages(initialMessages);
   };
 
   return (

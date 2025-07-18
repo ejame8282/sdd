@@ -1,8 +1,4 @@
-import { type Message } from 'ai';
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = "https://gjhhzudeactglbcmesdx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqaGh6dWRlYWN0Z2xiY21lc2R4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NTA1OTcsImV4cCI6MjA2ODQyNjU5N30.tmpmi8-BL7xHoXA1FG84ZaI0l9_bJlgisRlIU6X_dI0";
+import { StreamingTextResponse, Message } from 'ai';
 
 export const runtime = 'edge';
 
@@ -34,63 +30,28 @@ function getLocalAIResponse(messages: Message[]): string {
   return `I have processed your message: "${lastUserMessage.content}". As a simple rule-based model, my capabilities are currently limited, but I am learning and evolving.`;
 }
 
-function createStream(text: string) {
+// A helper function to create a ReadableStream from text
+// that simulates a streaming effect.
+function textToStream(text: string) {
   const encoder = new TextEncoder();
-  let pos = 0;
-  return new ReadableStream({
-    async pull(controller) {
-      if (pos === 0) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (const char of text) {
+        controller.enqueue(encoder.encode(char));
+        await new Promise(resolve => setTimeout(resolve, 20)); // simulate delay
       }
-      if (pos < text.length) {
-        const chunkSize = Math.floor(Math.random() * 3) + 1;
-        const chunk = text.slice(pos, pos + chunkSize);
-        controller.enqueue(encoder.encode(chunk));
-        pos += chunkSize;
-        await new Promise(resolve => setTimeout(resolve, 40));
-      } else {
-        controller.close();
-      }
+      controller.close();
     },
   });
+  return stream;
 }
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
-  const authHeader = req.headers.get('Authorization');
-
-  if (!authHeader) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  const token = authHeader.replace('Bearer ', '');
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  const lastUserMessage = messages[messages.length - 1];
+  
   const aiResponseText = getLocalAIResponse(messages);
 
-  if (lastUserMessage && lastUserMessage.role === 'user') {
-    const { error } = await supabase.from('messages').insert([
-      { role: 'user', content: lastUserMessage.content, user_id: user.id },
-      { role: 'assistant', content: aiResponseText, user_id: user.id },
-    ]);
-    if (error) {
-        console.error("Error saving message:", error);
-    }
-  }
+  const stream = textToStream(aiResponseText);
 
-  const stream = createStream(aiResponseText);
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-    },
-  });
+  return new StreamingTextResponse(stream);
 }
