@@ -12,36 +12,20 @@ import {
 } from "@/components/ui/card";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./ui/button";
-import { RotateCw, Send } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Message } from "ai";
-import { Input } from "./ui/input";
-import { useSession } from "@/context/session-context";
-import { UserNav } from "./user-nav";
+import { RotateCw } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-function ChatInterface({
-  assistantName,
-  initialMessages,
-  accessToken,
-}: {
-  assistantName: string;
-  initialMessages: Message[];
-  accessToken: string;
-}) {
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    setMessages,
-  } = useChat({
-    initialMessages,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+export function ChatLayout({ assistantName }: { assistantName: string }) {
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } =
+    useChat({
+      initialMessages: [
+        {
+          id: "1",
+          role: "assistant",
+          content: `I am ${assistantName}, a self-contained intelligence. All my functions are running locally. How can I help you?`,
+        },
+      ],
+    });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -53,8 +37,7 @@ function ChatInterface({
     scrollToBottom();
   }, [messages]);
 
-  const handleClearChat = async () => {
-    await supabase.from("messages").delete().neq("id", 0);
+  const handleClearChat = () => {
     const firstMessage = {
       id: "1",
       role: "assistant" as const,
@@ -74,7 +57,6 @@ function ChatInterface({
               <span className="sr-only">Clear Chat</span>
             </Button>
             <ThemeToggle />
-            <UserNav />
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 overflow-y-auto">
@@ -92,89 +74,5 @@ function ChatInterface({
         </CardFooter>
       </Card>
     </div>
-  );
-}
-
-export function ChatLayout({ assistantName }: { assistantName: string }) {
-  const [initialMessages, setInitialMessages] = useState<Message[] | undefined>(
-    undefined
-  );
-  const { session } = useSession();
-
-  useEffect(() => {
-    if (!session) return;
-
-    const fetchHistory = async () => {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("id, role, content")
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching chat history:", error);
-        setInitialMessages([
-          {
-            id: "1",
-            role: "assistant",
-            content: `I am ${assistantName}. I had trouble recalling our past conversation. How can I help you?`,
-          },
-        ]);
-      } else if (data && data.length > 0) {
-        setInitialMessages(
-          data.map((m) => ({
-            ...m,
-            id: m.id.toString(),
-            role: m.role as "user" | "assistant",
-          }))
-        );
-      } else {
-        setInitialMessages([
-          {
-            id: "1",
-            role: "assistant",
-            content: `I am ${assistantName}, a self-contained intelligence. All my functions are running locally. How can I help you?`,
-          },
-        ]);
-      }
-    };
-
-    fetchHistory();
-  }, [session, assistantName]);
-
-  if (!initialMessages || !session) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-background p-4">
-        <Card className="w-full max-w-3xl h-[90vh] flex flex-col shadow-lg">
-          <CardHeader className="border-b flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">{assistantName}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" disabled>
-                <RotateCw className="h-4 w-4" />
-              </Button>
-              <ThemeToggle />
-            </div>
-          </CardHeader>
-          <CardContent className="flex-grow p-6 flex justify-center items-center">
-            <RotateCw className="h-6 w-6 animate-spin" />
-          </CardContent>
-          <CardFooter className="p-4 border-t">
-            <div className="flex w-full items-center space-x-2">
-              <Input placeholder="Recalling memories..." disabled />
-              <Button type="submit" size="icon" disabled>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <ChatInterface
-      assistantName={assistantName}
-      initialMessages={initialMessages}
-      accessToken={session.access_token}
-    />
   );
 }
