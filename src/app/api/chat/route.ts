@@ -1,10 +1,11 @@
 import { StreamingTextResponse, Message } from 'ai';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 
-// Set the runtime to edge for best performance
+const SUPABASE_URL = "https://gjhhzudeactglbcmesdx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqaGh6dWRlYWN0Z2xiY21lc2R4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NTA1OTcsImV4cCI6MjA2ODQyNjU5N30.tmpmi8-BL7xHoXA1FG84ZaI0l9_bJlgisRlIU6X_dI0";
+
 export const runtime = 'edge';
 
-// A simple, rule-based "AI" model that simulates responses.
 function getLocalAIResponse(messages: Message[]): string {
   const lastUserMessage = messages.filter(m => m.role === 'user').pop();
 
@@ -30,28 +31,22 @@ function getLocalAIResponse(messages: Message[]): string {
     return "I can respond to a few simple phrases. My goal is to demonstrate a self-contained AI, free from external services. I can be expanded with more complex logic right here in the code.";
   }
 
-  // Default response
   return `I have processed your message: "${lastUserMessage.content}". As a simple rule-based model, my capabilities are currently limited, but I am learning and evolving.`;
 }
 
-// This function creates a streaming response from a string of text.
 function createStream(text: string) {
   const encoder = new TextEncoder();
   let pos = 0;
   return new ReadableStream({
     async pull(controller) {
-      // Add a delay to simulate thinking and typing
       if (pos === 0) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
-
       if (pos < text.length) {
-        // Send chunks of 1-3 characters to simulate typing
         const chunkSize = Math.floor(Math.random() * 3) + 1;
         const chunk = text.slice(pos, pos + chunkSize);
         controller.enqueue(encoder.encode(chunk));
         pos += chunkSize;
-        // Add a small delay between chunks
         await new Promise(resolve => setTimeout(resolve, 40));
       } else {
         controller.close();
@@ -62,21 +57,36 @@ function createStream(text: string) {
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
+  const authHeader = req.headers.get('Authorization');
+
+  if (!authHeader) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
 
   const lastUserMessage = messages[messages.length - 1];
   const aiResponseText = getLocalAIResponse(messages);
 
-  // Save user message and AI response to Supabase
   if (lastUserMessage && lastUserMessage.role === 'user') {
-    await supabase.from('messages').insert([
-      { role: 'user', content: lastUserMessage.content },
-      { role: 'assistant', content: aiResponseText },
+    const { error } = await supabase.from('messages').insert([
+      { role: 'user', content: lastUserMessage.content, user_id: user.id },
+      { role: 'assistant', content: aiResponseText, user_id: user.id },
     ]);
+    if (error) {
+        console.error("Error saving message:", error);
+    }
   }
 
-  // Create a stream from the response
   const stream = createStream(aiResponseText);
-
-  // Respond with the stream
   return new StreamingTextResponse(stream);
 }
