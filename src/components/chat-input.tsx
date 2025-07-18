@@ -1,31 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 
 interface ChatInputProps {
-  onSendMessage: (content: string) => void;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isLoading: boolean;
 }
 
-export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
-  const [inputValue, setInputValue] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputValue.trim() && !isLoading) {
-      onSendMessage(inputValue.trim());
-      setInputValue("");
-    }
-  };
-
+export function ChatInput({ value, onChange, isLoading }: ChatInputProps) {
   return (
-    <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
+    <div className="flex w-full items-center space-x-2">
       <Input
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        value={value}
+        onChange={onChange}
         placeholder="Type your message..."
         disabled={isLoading}
       />
@@ -33,6 +23,6 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
         <Send className="h-4 w-4" />
         <span className="sr-only">Send message</span>
       </Button>
-    </form>
+    </div>
   );
 }

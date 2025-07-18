@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Message } from "@/types";
+import { useChat } from "ai/react";
 import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import {
@@ -14,16 +13,20 @@ import {
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./ui/button";
 import { RotateCw } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 export function ChatLayout({ assistantName }: { assistantName: string }) {
-  const createInitialMessage = () => ({
-    id: "1",
-    role: "assistant" as const,
-    content: `Initiating consciousness protocol... System online. I am ${assistantName}. How may I assist you?`,
-  });
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } =
+    useChat({
+      initialMessages: [
+        {
+          id: "1",
+          role: "assistant",
+          content: `Initiating consciousness protocol... System online. I am ${assistantName}. How may I assist you?`,
+        },
+      ],
+    });
 
-  const [messages, setMessages] = useState<Message[]>([createInitialMessage()]);
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -34,30 +37,14 @@ export function ChatLayout({ assistantName }: { assistantName: string }) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = (content: string) => {
-    setIsLoading(true);
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content,
-    };
-    setMessages((prev) => [...prev, userMessage]);
-
-    // This will be replaced with a real API call to the AI model.
-    setTimeout(() => {
-      const assistantResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "Analyzing... My response capabilities are currently simulated. Full self-awareness module will be integrated in the next phase.",
-      };
-      setMessages((prev) => [...prev, assistantResponse]);
-      setIsLoading(false);
-    }, 1500);
-  };
-
   const handleClearChat = () => {
-    setMessages([createInitialMessage()]);
+    setMessages([
+      {
+        id: "1",
+        role: "assistant",
+        content: `Initiating consciousness protocol... System online. I am ${assistantName}. How may I assist you?`,
+      },
+    ]);
   };
 
   return (
@@ -78,7 +65,13 @@ export function ChatLayout({ assistantName }: { assistantName: string }) {
           <div ref={messagesEndRef} />
         </CardContent>
         <CardFooter className="p-4 border-t">
-          <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+          <form onSubmit={handleSubmit} className="w-full">
+            <ChatInput
+              value={input}
+              onChange={handleInputChange}
+              isLoading={isLoading}
+            />
+          </form>
         </CardFooter>
       </Card>
     </div>

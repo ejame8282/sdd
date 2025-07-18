@@ -1,4 +1,4 @@
-import { Message } from "@/types";
+import { Message } from "ai";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, User } from "lucide-react";
@@ -47,7 +47,9 @@ export function ChatMessages({
           )}
         </div>
       ))}
-      {isLoading && <TypingIndicator />}
+      {isLoading && messages[messages.length - 1]?.role === "user" && (
+        <TypingIndicator />
+      )}
     </div>
   );
 }
