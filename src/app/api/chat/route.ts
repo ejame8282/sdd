@@ -1,4 +1,8 @@
-import { type Message } from 'ai';
+import { StreamingTextResponse, type Message } from 'ai';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = "https://gjhhzudeactglbcmesdx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqaGh6dWRlYWN0Z2xiY21lc2R4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NTA1OTcsImV4cCI6MjA2ODQyNjU5N30.tmpmi8-BL7xHoXA1FG84ZaI0l9_bJlgisRlIU6X_dI0";
 
 export const runtime = 'edge';
 
@@ -53,14 +57,36 @@ function createStream(text: string) {
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
-  
+  const authHeader = req.headers.get('Authorization');
+
+  if (!authHeader) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const lastUserMessage = messages[messages.length - 1];
   const aiResponseText = getLocalAIResponse(messages);
 
+  if (lastUserMessage && lastUserMessage.role === 'user') {
+    const { error } = await supabase.from('messages').insert([
+      { role: 'user', content: lastUserMessage.content, user_id: user.id },
+      { role: 'assistant', content: aiResponseText, user_id: user.id },
+    ]);
+    if (error) {
+        console.error("Error saving message:", error);
+    }
+  }
+
   const stream = createStream(aiResponseText);
-  
-  // We use the standard Response object to stream the text.
-  // The `useChat` hook can handle this for simple text streams.
-  return new Response(stream, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  });
+  return new StreamingTextResponse(stream);
 }
