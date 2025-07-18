@@ -2,8 +2,15 @@ import { Message } from "@/types";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, User } from "lucide-react";
+import { TypingIndicator } from "./typing-indicator";
 
-export function ChatMessages({ messages }: { messages: Message[] }) {
+export function ChatMessages({
+  messages,
+  isLoading,
+}: {
+  messages: Message[];
+  isLoading: boolean;
+}) {
   return (
     <div className="space-y-6">
       {messages.map((message) => (
@@ -40,6 +47,7 @@ export function ChatMessages({ messages }: { messages: Message[] }) {
           )}
         </div>
       ))}
+      {isLoading && <TypingIndicator />}
     </div>
   );
 }
