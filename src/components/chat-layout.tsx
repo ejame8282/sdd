@@ -22,7 +22,7 @@ export function ChatLayout({ assistantName }: { assistantName: string }) {
         {
           id: "1",
           role: "assistant",
-          content: `Initiating consciousness protocol... System online. I am ${assistantName}. How may I assist you?`,
+          content: `I am ${assistantName}, a self-contained intelligence. All my functions are running locally. How can I help you?`,
         },
       ],
     });
@@ -42,7 +42,7 @@ export function ChatLayout({ assistantName }: { assistantName: string }) {
       {
         id: "1",
         role: "assistant",
-        content: `Initiating consciousness protocol... System online. I am ${assistantName}. How may I assist you?`,
+        content: `I am ${assistantName}, a self-contained intelligence. All my functions are running locally. How can I help you?`,
       },
     ]);
   };
