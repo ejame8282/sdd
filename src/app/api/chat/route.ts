@@ -1,4 +1,5 @@
 import { StreamingTextResponse, Message } from 'ai';
+import { supabase } from '@/integrations/supabase/client';
 
 // Set the runtime to edge for best performance
 export const runtime = 'edge';
@@ -62,11 +63,19 @@ function createStream(text: string) {
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  // Get the response from our local "AI"
-  const aiResponse = getLocalAIResponse(messages);
+  const lastUserMessage = messages[messages.length - 1];
+  const aiResponseText = getLocalAIResponse(messages);
+
+  // Save user message and AI response to Supabase
+  if (lastUserMessage && lastUserMessage.role === 'user') {
+    await supabase.from('messages').insert([
+      { role: 'user', content: lastUserMessage.content },
+      { role: 'assistant', content: aiResponseText },
+    ]);
+  }
 
   // Create a stream from the response
-  const stream = createStream(aiResponse);
+  const stream = createStream(aiResponseText);
 
   // Respond with the stream
   return new StreamingTextResponse(stream);
