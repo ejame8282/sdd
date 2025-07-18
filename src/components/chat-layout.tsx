@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/card";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./ui/button";
-import { LogOut, RotateCw, Send } from "lucide-react";
+import { RotateCw, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "ai";
 import { Input } from "./ui/input";
 import { useSession } from "@/context/session-context";
-import { useRouter } from "next/navigation";
+import { UserNav } from "./user-nav";
 
 function ChatInterface({
   assistantName,
@@ -44,7 +44,6 @@ function ChatInterface({
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,11 +63,6 @@ function ChatInterface({
     setMessages([firstMessage]);
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   return (
     <div className="flex justify-center items-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-3xl h-[90vh] flex flex-col shadow-lg">
@@ -80,10 +74,7 @@ function ChatInterface({
               <span className="sr-only">Clear Chat</span>
             </Button>
             <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" />
-              <span className="sr-only">Sign Out</span>
-            </Button>
+            <UserNav />
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 overflow-y-auto">
@@ -161,9 +152,6 @@ export function ChatLayout({ assistantName }: { assistantName: string }) {
                 <RotateCw className="h-4 w-4" />
               </Button>
               <ThemeToggle />
-              <Button variant="ghost" size="icon" disabled>
-                <LogOut className="h-4 w-4" />
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="flex-grow p-6 flex justify-center items-center">
